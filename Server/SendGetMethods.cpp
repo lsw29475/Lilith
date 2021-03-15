@@ -5,7 +5,7 @@ bool Server::recvall(int ID, char * data, int totalbytes)
 	int bytesreceived = 0; //Holds the total bytes received
 	while (bytesreceived < totalbytes) //While we still have more bytes to recv
 	{
-		int RetnCheck = recv(connections[ID]->socket, data, totalbytes - bytesreceived, NULL); //Try to recv remaining bytes
+		int RetnCheck = recv(connections[ID]->socket, data + bytesreceived, totalbytes - bytesreceived, NULL); //Try to recv remaining bytes
 		if (RetnCheck == SOCKET_ERROR) //If there is a socket error while trying to recv bytes
 			return false; //Return false - failed to recvall
 		bytesreceived += RetnCheck; //Add to total bytes received
