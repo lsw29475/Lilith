@@ -31,6 +31,10 @@ Features
 * DNS Resolving
 * Low Latency & Bandwith use
 * Error-Handler with logs
+* Screen Shot
+* Get System Information
+* Get Process List
+* FileTrans
 
 Modularity
 ---
