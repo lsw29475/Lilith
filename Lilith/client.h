@@ -29,7 +29,7 @@ public: //Public functions
 
 	bool SendString(std::string _string, PacketType _packettype);
 	bool CloseConnection();
-	bool RequestFile(std::string FileName);
+	bool RequestFile(std::string srcFileName, std::string dstFileName);
 	static bool connected;
 private: //Private functions
 	bool ProcessPacketType(PacketType _PacketType);

